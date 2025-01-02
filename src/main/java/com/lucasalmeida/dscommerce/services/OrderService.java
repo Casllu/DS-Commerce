@@ -1,9 +1,13 @@
 package com.lucasalmeida.dscommerce.services;
 
 import com.lucasalmeida.dscommerce.dto.OrderDTO;
+import com.lucasalmeida.dscommerce.dto.OrderItemDTO;
 import com.lucasalmeida.dscommerce.dto.ProductDTO;
 import com.lucasalmeida.dscommerce.entities.Order;
+import com.lucasalmeida.dscommerce.entities.OrderItem;
+import com.lucasalmeida.dscommerce.entities.OrderStatus;
 import com.lucasalmeida.dscommerce.entities.Product;
+import com.lucasalmeida.dscommerce.repositories.OrderItemRepository;
 import com.lucasalmeida.dscommerce.repositories.OrderRepository;
 import com.lucasalmeida.dscommerce.repositories.ProductRepository;
 import com.lucasalmeida.dscommerce.services.exceptions.ResourceNotFoundException;
@@ -11,11 +15,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+
 @Service
 public class OrderService {
 
     @Autowired
     private OrderRepository repository;
+	@Autowired
+	private ProductRepository productRepository;
+	@Autowired
+	private OrderItemRepository orderItemRepository;
+	@Autowired
+	private UserService userService;
 
     @Transactional(readOnly = true)
     public OrderDTO findById(Long id) {
@@ -24,4 +36,24 @@ public class OrderService {
                 () -> new ResourceNotFoundException("Recurso não encontrado"));
         return new OrderDTO(order);
     }
+
+	@Transactional
+	public OrderDTO insert(OrderDTO dto) {
+		Order order = new Order();
+
+		order.setMoment(Instant.now());
+		order.setStatus(OrderStatus.WAITING_PAYMENT);
+		order.setClient(userService.authenticated());
+
+		for (OrderItemDTO itemDTO : dto.getItems()) {
+			Product product = productRepository.getReferenceById(itemDTO.getProductId());
+			OrderItem item = new OrderItem(order, product,
+					itemDTO.getQuantity(), product.getPrice());
+			order.getItems().add(item);
+		}
+		repository.save(order);
+		orderItemRepository.saveAll(order.getItems());
+
+		return new OrderDTO(order);
+	}
 }
