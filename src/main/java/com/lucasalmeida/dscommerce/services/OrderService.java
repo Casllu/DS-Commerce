@@ -3,10 +3,7 @@ package com.lucasalmeida.dscommerce.services;
 import com.lucasalmeida.dscommerce.dto.OrderDTO;
 import com.lucasalmeida.dscommerce.dto.OrderItemDTO;
 import com.lucasalmeida.dscommerce.dto.ProductDTO;
-import com.lucasalmeida.dscommerce.entities.Order;
-import com.lucasalmeida.dscommerce.entities.OrderItem;
-import com.lucasalmeida.dscommerce.entities.OrderStatus;
-import com.lucasalmeida.dscommerce.entities.Product;
+import com.lucasalmeida.dscommerce.entities.*;
 import com.lucasalmeida.dscommerce.repositories.OrderItemRepository;
 import com.lucasalmeida.dscommerce.repositories.OrderRepository;
 import com.lucasalmeida.dscommerce.repositories.ProductRepository;
@@ -28,12 +25,15 @@ public class OrderService {
 	private OrderItemRepository orderItemRepository;
 	@Autowired
 	private UserService userService;
+	@Autowired
+	private AuthService authService;
 
     @Transactional(readOnly = true)
     public OrderDTO findById(Long id) {
 
         Order order = repository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("Recurso não encontrado"));
+		authService.validateSelfOrAdmin(order.getClient().getId());
         return new OrderDTO(order);
     }
 
